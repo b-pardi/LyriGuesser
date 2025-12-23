@@ -1,0 +1,28 @@
+# docker-compose.yml
+services:
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"   # MailHog UI
+      - "1025:1025"   # SMTP
+
+  app:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./server:/app
+      - ./data:/data
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DATABASE_URL: "file:/data/db.sqlite"
+      JWT_SECRET: "dev-change-me"
+      APP_ORIGIN: "http://localhost:5173"
+      SMTP_HOST: "mailhog"
+      SMTP_PORT: "1025"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "no-reply@emo-pop.game"
+    ports:
+      - "8080:8080"
+    command: sh -c "npm i && npx prisma migrate deploy && node src/index.js"

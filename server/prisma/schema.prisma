@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  isVerified   Boolean  @default(false)
+
+  // "USER" or "ADMIN"
+  role         String   @default("USER")
+
+  createdAt    DateTime @default(now())
+
+  lyrics       Lyric[]
+  verifyTokens VerifyToken[]
+}
+
+model VerifyToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Genre {
+  id        String   @id @default(cuid())
+
+  // "emo", "pop", "metal" etc (unique key used by code)
+  key       String   @unique
+
+  // Human-friendly label shown in UI, e.g. "Emo"
+  label     String
+
+  // lets you "hide" a genre without deleting it
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  lyrics    Lyric[]
+}
+
+model Lyric {
+  id        String   @id @default(cuid())
+  text      String
+
+  // NEW: reference Genre instead of storing genre as string
+  genreId   String
+  genre     Genre    @relation(fields: [genreId], references: [id])
+
+  // lyric source info
+  songTitle String
+  artist    String
+  
+  scope     String   @default("PERSONAL")
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([scope])
+  @@index([ownerId])
+  @@index([genreId])
+}
