@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Lyric" ADD COLUMN "artist" TEXT DEFAULT 'SetNull';
+ALTER TABLE "Lyric" ADD COLUMN "songTitle" TEXT DEFAULT 'PERSONAL';

@@ -119,6 +119,8 @@ app.get("/api/lyrics/global", async (req, res) => {
     select: {
       id: true,
       text: true,
+      songTitle: true,
+      artist: true,
       genre: { select: { id: true, key: true, label: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -134,6 +136,8 @@ app.get("/api/lyrics/mine", requireAuth, async (req, res) => {
     select: {
       id: true,
       text: true,
+      songTitle: true,
+      artist: true,
       genre: { select: { id: true, key: true, label: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -144,10 +148,12 @@ app.get("/api/lyrics/mine", requireAuth, async (req, res) => {
 
 // Logged-in users can add a personal lyric
 app.post("/api/lyrics/mine", requireAuth, async (req, res) => {
-  const { text, genreId } = req.body || {};
+  const { text, genreId, songTitle, artist } = req.body || {};
 
-  if (!text || !genreId) {
-    return res.status(400).json({ error: "Missing text or genreId" });
+  if (!text || !genreId || !songTitle || !artist) {
+    return res.status(400).json({
+      error: "Missing text, genreId, songTitle, or artist",
+    });
   }
 
   // Ensure genre exists and is active
@@ -160,6 +166,8 @@ app.post("/api/lyrics/mine", requireAuth, async (req, res) => {
   const lyric = await prisma.lyric.create({
     data: {
       text: text.trim(),
+      songTitle: songTitle.trim(),
+      artist: artist.trim(),
       genreId,
       scope: "PERSONAL",
       ownerId: req.user.sub,
@@ -167,6 +175,8 @@ app.post("/api/lyrics/mine", requireAuth, async (req, res) => {
     select: {
       id: true,
       text: true,
+      songTitle: true,
+      artist: true,
       genre: { select: { id: true, key: true, label: true } },
     },
   });
@@ -176,10 +186,12 @@ app.post("/api/lyrics/mine", requireAuth, async (req, res) => {
 
 // Admin can add global lyrics
 app.post("/api/lyrics/global", requireAuth, requireAdmin, async (req, res) => {
-  const { text, genreId } = req.body || {};
+  const { text, genreId, songTitle, artist } = req.body || {};
 
-  if (!text || !genreId) {
-    return res.status(400).json({ error: "Missing text or genreId" });
+  if (!text || !genreId || !songTitle || !artist) {
+    return res.status(400).json({
+      error: "Missing text, genreId, songTitle, or artist",
+    });
   }
 
   const genre = await prisma.genre.findFirst({
@@ -193,6 +205,8 @@ app.post("/api/lyrics/global", requireAuth, requireAdmin, async (req, res) => {
     select: {
       id: true,
       text: true,
+      songTitle: true,
+      artist: true,
       genre: { select: { id: true, key: true, label: true } },
     },
   });

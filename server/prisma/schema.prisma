@@ -65,8 +65,8 @@ model Lyric {
   genre     Genre    @relation(fields: [genreId], references: [id])
 
   // lyric source info
-  songTitle String
-  artist    String
+  songTitle String?  
+  artist    String?  
   
   scope     String   @default("PERSONAL")
   ownerId   String?
