@@ -201,7 +201,14 @@ app.post("/api/lyrics/global", requireAuth, requireAdmin, async (req, res) => {
   if (!genre) return res.status(400).json({ error: "Invalid genreId" });
 
   const lyric = await prisma.lyric.create({
-    data: { text: text.trim(), genreId, scope: "GLOBAL" },
+    data: {
+      text: text.trim(),
+      songTitle: songTitle.trim(),
+      artist: artist.trim(),
+      genreId,
+      scope: "GLOBAL",
+      ownerId: req.user.sub,
+    },
     select: {
       id: true,
       text: true,
