@@ -18,6 +18,8 @@ export default function AddLyrics() {
   const [text, setText] = useState("");
   const [genreId, setGenreId] = useState("");
   const [msg, setMsg] = useState("");
+  const [songTitle, setSongTitle] = useState("");
+  const [artist, setArtist] = useState("");
 
   useEffect(() => {
     api("/api/genres")
@@ -36,10 +38,17 @@ export default function AddLyrics() {
       await api("/api/lyrics/mine", {
         method: "POST",
         auth: true,
-        body: { text, genreId },
+        body: {
+          text,
+          genreId,
+          songTitle,
+          artist,
+        },
       });
       setMsg("✅ Added to your personal pool.");
       setText("");
+      setSongTitle("");
+      setArtist("");
     } catch (err) {
       setMsg(`❌ ${err.message}`);
     }
@@ -52,10 +61,17 @@ export default function AddLyrics() {
       await api("/api/lyrics/global", {
         method: "POST",
         auth: true,
-        body: { text, genreId },
+        body: {
+          text,
+          genreId,
+          songTitle,
+          artist,
+        },
       });
       setMsg("✅ Added to GLOBAL pool.");
       setText("");
+      setSongTitle("");
+      setArtist("");
     } catch (err) {
       setMsg(`❌ ${err.message} (You probably aren't ADMIN yet)`);
     }
@@ -75,6 +91,18 @@ export default function AddLyrics() {
       <h2>Add Lyrics</h2>
 
       <form>
+        <label>Song title</label>
+        <input
+          value={songTitle}
+          onChange={(e) => setSongTitle(e.target.value)}
+        />
+
+        <label style={{ marginTop: 10 }}>Artist</label>
+        <input
+          value={artist}
+          onChange={(e) => setArtist(e.target.value)}
+        />
+
         <label>Lyric text</label>
         <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} />
 

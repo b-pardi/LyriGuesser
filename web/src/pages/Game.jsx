@@ -1,14 +1,3 @@
-/**
- * Game.jsx
- *
- * Global-pool gameplay:
- * - Anyone can play (no account required)
- * - We fetch global lyrics once
- * - We shuffle them
- * - We walk through them in order (this is "without replacement")
- * - Reset reshuffles and resets score
- */
-
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 
@@ -25,15 +14,21 @@ function shuffle(arr) {
 export default function Game() {
   const [genres, setGenres] = useState([]);               // available genres
   const [selected, setSelected] = useState(new Set());    // set of genreIds selected
+
   const [pool, setPool] = useState([]);                   // lyrics fetched
-  const [idx, setIdx] = useState(0);
-  const [points, setPoints] = useState(0);
-  const [last, setLast] = useState(null);                 // { correct, actualLabel }
+  const [idx, setIdx] = useState(0);                      // which lyric we are on
+  const [points, setPoints] = useState(0);                // score
+
+  // last = result for the CURRENT lyric. When last is not null, we already guessed.
+  // We intentionally do NOT advance idx on guess. "Next" button advances.
+  const [last, setLast] = useState(null);                 // { correct, actualLabel, artist, songTitle }
   const [msg, setMsg] = useState("");
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
   const current = pool[idx] || null;
-  const done = pool.length > 0 && idx >= pool.length;
+
+  // "done" means there is no current lyric (idx is past end)
+  const done = idx >= pool.length;
 
   // Load genres on first visit
   useEffect(() => {
@@ -76,7 +71,6 @@ export default function Game() {
     const qp = encodeURIComponent(selectedIds.join(","));
     const out = await api(`/api/lyrics/global?genreIds=${qp}`);
 
-    // Note: lyric.genre is now an object {id,key,label}
     setPool(shuffle(out.lyrics || []));
 
     if ((out.lyrics || []).length === 0) {
@@ -84,22 +78,38 @@ export default function Game() {
     }
   }
 
-  // If selection changes, don’t auto-reset. Force explicit Start/Reset to avoid surprise.
-  const canPlay = selectedIds.length >= 2;
+  // Prevent guessing more than once per lyric:
+  const hasGuessedThisLyric = last !== null;
 
   function guess(guessedGenreId) {
     if (!current) return;
+    if (hasGuessedThisLyric) return; // don't allow double-scoring
 
     const actualGenreId = current.genre.id;
     const correct = guessedGenreId === actualGenreId;
 
     if (correct) setPoints((p) => p + 1);
-    setLast({ correct, actualLabel: current.genre.label });
 
+    // Store the reveal info for THIS lyric.
+    // We include artist/songTitle here so it still displays even after "Next".
+    setLast({
+      correct,
+      actualLabel: current.genre.label,
+      artist: current.artist,
+      songTitle: current.songTitle,
+    });
+  }
+
+  function nextLyric() {
+    // Only allow Next after a guess (keeps flow clean)
+    if (!hasGuessedThisLyric) return;
+
+    setLast(null);
     setIdx((i) => i + 1);
   }
 
   const remaining = Math.max(pool.length - idx, 0);
+  const canPlay = selectedIds.length >= 2;
 
   return (
     <div className="card">
@@ -133,6 +143,16 @@ export default function Game() {
         <button onClick={() => startOrReset().catch((e) => setMsg(e.message))} disabled={!canPlay}>
           Start / Reset
         </button>
+
+        {/* Next button: only enabled after you guess and if there IS a next */}
+        <button
+          onClick={nextLyric}
+          disabled={!hasGuessedThisLyric || done}
+          title={!hasGuessedThisLyric ? "Guess first" : ""}
+        >
+          Next
+        </button>
+
         <div className="spacer" />
         <div><b>Points:</b> {points}</div>
         <div><b>Remaining:</b> {remaining}</div>
@@ -142,7 +162,7 @@ export default function Game() {
 
       <div className="lyricBox">
         {done ? (
-          <p><b>Out of lyrics.</b> Hit Start/Reset.</p>
+          <p><b>Out of lyrics.</b> Hit Start/Reset to reshuffle.</p>
         ) : current ? (
           <p className="lyricText">“{current.text}”</p>
         ) : (
@@ -158,7 +178,7 @@ export default function Game() {
           return (
             <button
               key={gid}
-              disabled={!current || done}
+              disabled={!current || done || hasGuessedThisLyric}
               onClick={() => guess(gid)}
             >
               {g.label}
@@ -167,9 +187,19 @@ export default function Game() {
         })}
       </div>
 
+      {/* Reveal result AFTER guess, even on last lyric */}
       {last && (
-        <p className="result">
-          {last.correct ? "✅ Correct" : "❌ Wrong"} — it was <b>{last.actualLabel}</b>
+        <p className="result" style={{ marginTop: 12 }}>
+          {last.correct ? "✅ Correct" : "❌ Wrong"} — it was{" "}
+          <b>{last.actualLabel}</b>{" "}
+          (<i>{last.artist}</i> — <i>{last.songTitle}</i>)
+        </p>
+      )}
+
+      {/* Helpful hint when user is at final lyric and has guessed */}
+      {last && !done && idx === pool.length - 1 && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          That was the last lyric — click <b>Next</b> to finish the round.
         </p>
       )}
     </div>
